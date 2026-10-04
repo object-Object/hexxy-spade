@@ -5,54 +5,101 @@ pub type Stack<#uint N> = [int<32>; N];
 pub fn operate<#uint N>(stack: Stack<N>, op: Op) -> Stack<N> {
     match op {
         Op::Add => {
-            let (rest, [a, b]) = pop(stack);
-            push(rest, [a +. b])
+            let (rest, [a, b]) = stack.pop();
+            rest.push_back(a +. b).pad()
         },
         Op::Multiply => {
-            let (rest, [a, b]) = pop(stack);
-            push(rest, [a *. b])
+            let (rest, [a, b]) = stack.pop();
+            rest.push_back(a *. b).pad()
         },
 
         Op::ShiftLeft => {
-            let (rest, [x, shift]) = pop(stack);
-            push(rest, [x << shift])
+            let (rest, [x, shift]) = stack.pop();
+            rest.push_back(x << shift).pad()
         },
         Op::LogicShiftRight => {
-            let (rest, [x, shift]) = pop(stack);
-            push(rest, [(x.as_uint() >> shift.as_uint()).as_int()])
+            let (rest, [x, shift]) = stack.pop();
+            rest.push_back((x.as_uint() >> shift.as_uint()).as_int()).pad()
         },
         Op::ArithShiftRight => {
-            let (rest, [x, shift]) = pop(stack);
-            push(rest, [x >> shift])
+            let (rest, [x, shift]) = stack.pop();
+            rest.push_back(x >> shift).pad()
         },
 
         Op::If => {
-            let (rest, [a, b, c]) = pop(stack);
-            push(rest, [if a == 0 { c } else { b }])
+            let (rest, [a, b, c]) = stack.pop();
+            rest.push_back(if a == 0 { c } else { b }).pad()
         },
-        Op::Swap => {
-            let (rest, [a, b]) = pop(stack);
-            push(rest, [b, a])
+        Op::Equals => {
+            let (rest, [a, b]) = stack.pop();
+            rest.push_back(bool_to_int(a == b)).pad()
+        },
+        Op::NotEquals => {
+            let (rest, [a, b]) = stack.pop();
+            rest.push_back(bool_to_int(a != b)).pad()
+        },
+        Op::Greater => {
+            let (rest, [a, b]) = stack.pop();
+            rest.push_back(bool_to_int(a > b)).pad()
+        },
+        Op::GreaterEq => {
+            let (rest, [a, b]) = stack.pop();
+            rest.push_back(bool_to_int(a >= b)).pad()
+        },
+        Op::Less => {
+            let (rest, [a, b]) = stack.pop();
+            rest.push_back(bool_to_int(a < b)).pad()
+        },
+        Op::LessEq => {
+            let (rest, [a, b]) = stack.pop();
+            rest.push_back(bool_to_int(a <= b)).pad()
         },
 
-        Op::Number(value) => {
-            let ([_], rest) = stack.split_at();
-            push(rest, [value])
+        Op::Duplicate => {
+            let (rest, [value]) = stack.pop();
+            rest.concat([value, value]).unpad()
         },
+        Op::Duplicate2 => {
+            let (rest, [a, b]) = stack.pop();
+            rest.concat([a, b, a, b]).unpad()
+        },
+        Op::Swap => {
+            let (rest, [a, b]) = stack.pop();
+            rest.concat([b, a])
+        },
+
+        Op::Number(value) => stack.push_back(value).unpad(),
 
         Op::Invalid => stack,
     }
 }
 
-fn pop<#uint N, #uint Pop>(stack: Stack<N>) -> (Stack<{N - Pop}>, Stack<Pop>) {
-    stack.split_at::<{N - Pop}>()
+impl<#uint N> [int<32>; N] {
+    fn pad<#uint M>(self) -> Stack<M> {
+        [0; M - N].concat(self)
+    }
+
+    fn unpad<#uint M>(self) -> Stack<M> {
+        self.drop_front::<{N - M}>()
+    }
+
+    fn pop<#uint K>(self) -> (Stack<{N - K}>, Stack<K>) {
+        self.split_at::<{N - K}>()
+    }
+
+    fn drop_front<#uint K>(self) -> Stack<{N - K}> {
+        self.split_at::<K>().1
+    }
 }
 
-fn push<#uint N, #uint M, #uint Push>(stack: Stack<N>, push: Stack<Push>) -> Stack<M> {
-    [0; M - N - Push].concat(stack).concat(push)
+fn bool_to_int(value: bool) -> int<32> {
+    if value { 1 } else { 0 }
 }
 
 // testbench
 fn operate_4(stack: Stack<4>, op: Op) -> Stack<4> {
+    operate(stack, op)
+}
+fn operate_6(stack: Stack<6>, op: Op) -> Stack<6> {
     operate(stack, op)
 }

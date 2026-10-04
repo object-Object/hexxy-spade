@@ -1,31 +1,45 @@
 use lib::instructions::Op;
 
-pub struct DecodeResult {
+pub struct DecodedOp {
     op: Op,
     bytes: uint<3>,
 }
 
-pub fn decode(value: uint<32>) -> DecodeResult {
+pub fn decode(value: uint<32>) -> DecodedOp {
     let a = decode_angles(trunc(value >> 16));
     let b = decode_angles(trunc(value));
+    let invalid_4 = DecodedOp(Op::Invalid, 4);
     match a {
-        (Angle::W, Angle::A, Angle::A, Angle::W, Angle::Pad, false) => DecodeResult(Op::Add, 2),
-        (Angle::E, Angle::A, Angle::Q, Angle::Q, Angle::Pad, false) => DecodeResult(Op::ArithShiftRight, 2),
-        (Angle::A, Angle::W, Angle::D, Angle::D, Angle::Pad, false) => DecodeResult(Op::If, 2),
-        (Angle::W, Angle::A, Angle::Q, Angle::A, Angle::W, false) => DecodeResult(Op::Multiply, 2),
-        (Angle::Q, Angle::Q, Angle::A, Angle::E, Angle::Pad, false) => DecodeResult(Op::ShiftLeft, 2),
-        (Angle::A, Angle::A, Angle::W, Angle::D, Angle::D, false) => DecodeResult(Op::Swap, 2),
+        (Angle::W, Angle::A, Angle::A, Angle::W, Angle::Pad, false) => DecodedOp(Op::Add, 2),
+        (Angle::W, Angle::A, Angle::Q, Angle::A, Angle::W, false) => DecodedOp(Op::Multiply, 2),
 
+        (Angle::Q, Angle::Q, Angle::A, Angle::E, Angle::Pad, false) => DecodedOp(Op::ShiftLeft, 2),
+        (Angle::E, Angle::A, Angle::Q, Angle::Q, Angle::Pad, false) => DecodedOp(Op::ArithShiftRight, 2),
         (Angle::E, Angle::A, Angle::Q, Angle::Q, Angle::D, true) => match b {
-            (Angle::E, Angle::E, Angle::Pad, Angle::Pad, Angle::Pad, false) => DecodeResult(Op::LogicShiftRight, 4),
-            _ => DecodeResult(Op::Invalid, 4),
+            (Angle::E, Angle::E, Angle::Pad, Angle::Pad, Angle::Pad, false) => DecodedOp(Op::LogicShiftRight, 4),
+            _ => invalid_4,
         },
 
-        (Angle::Number, _, _, _, _, _) => DecodeResult(
+        (Angle::A, Angle::W, Angle::D, Angle::D, Angle::Pad, false) => DecodedOp(Op::If, 2),
+        (Angle::A, Angle::D, Angle::Pad, Angle::Pad, Angle::Pad, false) => DecodedOp(Op::Equals, 2),
+        (Angle::D, Angle::A, Angle::Pad, Angle::Pad, Angle::Pad, false) => DecodedOp(Op::NotEquals, 2),
+        (Angle::E, Angle::Pad, Angle::Pad, Angle::Pad, Angle::Pad, false) => DecodedOp(Op::Greater, 2),
+        (Angle::E, Angle::E, Angle::Pad, Angle::Pad, Angle::Pad, false) => DecodedOp(Op::GreaterEq, 2),
+        (Angle::Q, Angle::Pad, Angle::Pad, Angle::Pad, Angle::Pad, false) => DecodedOp(Op::Less, 2),
+        (Angle::Q, Angle::Q, Angle::Pad, Angle::Pad, Angle::Pad, false) => DecodedOp(Op::LessEq, 2),
+
+        (Angle::A, Angle::A, Angle::D, Angle::A, Angle::A, false) => DecodedOp(Op::Duplicate, 2),
+        (Angle::A, Angle::A, Angle::D, Angle::A, Angle::D, true) => match b {
+            (Angle::A, Angle::A, Angle::W, Angle::Pad, Angle::Pad, false) => DecodedOp(Op::Duplicate2, 4),
+            _ => invalid_4,
+        },
+        (Angle::A, Angle::A, Angle::W, Angle::D, Angle::D, false) => DecodedOp(Op::Swap, 2),
+
+        (Angle::Number, _, _, _, _, _) => DecodedOp(
             Op::Number(sext::<29, _>(trunc(value.as_int()))), 4
         ),
 
-        _ => DecodeResult(Op::Invalid, 2),
+        _ => DecodedOp(Op::Invalid, 2),
     }
 }
 

@@ -7,6 +7,15 @@ pub enum Op {
     ArithShiftRight,
 
     If,
+    Equals,
+    NotEquals,
+    Greater,
+    GreaterEq,
+    Less,
+    LessEq,
+
+    Duplicate,
+    Duplicate2,
     Swap,
 
     Number { value: int<32> },
