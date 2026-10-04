@@ -4,6 +4,7 @@ from cocotb.regression import TestFactory
 from cocotb.triggers import Timer
 from spade import SpadeExt
 
+
 async def test(dut, values):
     s = SpadeExt(dut)
     (stack, op, expected) = values
@@ -12,15 +13,19 @@ async def test(dut, values):
     await Timer(1, units="ps")
     s.o.assert_eq(expected)
 
+
 tf = TestFactory(test)
-tf.add_option('values', [
-    ([1, 2, 3, 4], "Op::Add", [0, 1, 2, 7]),
-    ([0, 0, 2, 3], "Op::If", [0, 0, 0, 3]),
-    ([0, 1, 2, 3], "Op::If", [0, 0, 0, 2]),
-    ([4, 1, 2, 3], "Op::If", [0, 0, 4, 2]),
-    ([1, 2, 3, 4], "Op::Swap", [1, 2, 4, 3]),
-    ([1, 2, 3, 4], "Op::Number(5)", [2, 3, 4, 5]),
-    ([1, 2, 3, 4], "Op::Duplicate", [2, 3, 4, 4]),
-    ([1, 2, 3, 4], "Op::Duplicate2", [3, 4, 3, 4]),
-])
+tf.add_option(
+    "values",
+    [
+        ([1, 2, 3, 4], "Op::Add", [0, 1, 2, 7]),
+        ([0, 0, 2, 3], "Op::If", [0, 0, 0, 3]),
+        ([0, 1, 2, 3], "Op::If", [0, 0, 0, 2]),
+        ([4, 1, 2, 3], "Op::If", [0, 0, 4, 2]),
+        ([1, 2, 3, 4], "Op::Swap", [1, 2, 4, 3]),
+        ([1, 2, 3, 4], "Op::Number(5)", [2, 3, 4, 5]),
+        ([1, 2, 3, 4], "Op::Duplicate", [2, 3, 4, 4]),
+        ([1, 2, 3, 4], "Op::Duplicate2", [3, 4, 3, 4]),
+    ],
+)
 tf.generate_tests()

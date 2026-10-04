@@ -10,8 +10,11 @@ entity main(
     clk: clock,
     rst_n: bool,
     io_led: inv &[bool; 24],
+    io_select: inv &[bool; 4],
+    io_segment: inv &[bool; 8],
 ) {
     let rst = !rst_n;
+
     reg(clk) counter: uint<28> reset(rst: 0) = if counter < 50_000_000 { counter +. 1 } else { 0 };
     let step = counter == 0;
     reg(clk) idx: uint<1> reset(rst: 0) = if step { idx +. 1 } else { idx };
@@ -19,7 +22,102 @@ entity main(
         Op::Number(1),
         Op::Add,
     ];
-    reg(clk) stack reset(rst: [0; 3]) = if step { operate(stack, code[idx]) } else { stack };
-    let value = stack.fold(0u24, fn |a, b| trunc(a.concat(trunc::<_, uint<8>>(b.as_uint()))));
-    set io_led = &value.as_bits();
+    reg(clk) stack reset(rst: [0; 64]) = if step { operate(stack, code[idx]) } else { stack };
+
+    let led_value = stack[60..63].fold(0u24, fn |a, b| trunc(a.concat(trunc::<_, uint<8>>(b.as_uint()))));
+    set io_led = &led_value.as_bits();
+
+    let chars = match inst double_dabble_3(clk, rst, trunc(stack[63])) {
+        Some((positive, a, b, c)) => [
+            if positive { Digit::Off } else { Digit::Custom(1 << 6) },
+            Digit::Number(Some(a), false),
+            Digit::Number(Some(b), false),
+            Digit::Number(Some(c), false),
+        ],
+        None => [Digit::Off, Digit::Off, Digit::Off, Digit::Off],
+    };
+    let (select, segment) = inst multi_seven_seg(clk, rst, chars);
+    set io_select = &select;
+    set io_segment = &segment;
+}
+
+entity double_dabble_3(clk: clock, rst: bool, value: int<10>) -> Option<(bool, uint<4>, uint<4>, uint<4>)> {
+    let scratch = inst double_dabble_3_internal(clk, rst, value);
+
+    if trunc(scratch) == 0u10 {
+        Some((value >= 0, trunc(scratch >> 18), trunc(scratch >> 14), trunc(scratch >> 10)))
+    } else {
+        None
+    }
+}
+
+entity double_dabble_3_internal(clk: clock, rst: bool, value: int<10>) -> uint<22> {
+    reg(clk) (current, rst_scratch) reset(rst: (value, true)) = if value != current { (value, true) } else { (current, false) };
+
+    reg(clk) (scratch, shifts): (uint<22>, uint<4>) reset(rst_scratch: (zext(value.abs()), 0)) = if shifts < 10 {
+        let new_scratch = (
+            scratch
+            +. if scratch & (0b1111 << 10) >= (0b0101 << 10) { (0b0011 << 10) } else { 0 }
+            +. if scratch & (0b1111 << 14) >= (0b0101 << 14) { (0b0011 << 14) } else { 0 }
+            +. if scratch & (0b1111 << 18) >= (0b0101 << 18) { (0b0011 << 18) } else { 0 }
+        ) << 1;
+        (new_scratch, shifts +. 1)
+    } else { (scratch, shifts) };
+
+    scratch
+}
+
+entity double_dabble_3_testbench(clk: clock, rst: bool, value: int<10>) -> uint<12> {
+    let scratch = inst double_dabble_3_internal(clk, rst, value);
+    trunc(scratch >> 10)
+}
+
+enum Digit {
+    Off,
+    Number { value: Option<uint<4>>, decimal: bool },
+    Custom { value: uint<8> },
+}
+
+entity multi_seven_seg(
+    clk: clock,
+    rst: bool,
+    chars: [Digit; 4],
+) -> ([bool; 4], [bool; 8]) {
+    let counter = inst simple_counter::$<Bits: 11>(clk, rst);
+    reg(clk) select_idx reset(rst: 0u2) = if counter == 0 { select_idx +. 1 } else { select_idx };
+
+    let select = ~(1 << zext(select_idx)).as_bits();
+
+    let char = match chars[3 -. select_idx] {
+        Digit::Off => 0,
+        Digit::Number(value, decimal) => zext(seven_seg(value)) | if decimal { 1 << 7 } else { 0 },
+        Digit::Custom(value) => value,
+    };
+    let segment = ~zext(char).as_bits();
+
+    (select, segment)
+}
+
+fn seven_seg(char: Option<uint<4>>) -> uint<7> {
+    match char {
+        Some(0) => 0b0111111,
+        Some(1) => 0b0000110,
+        Some(2) => 0b1011011,
+        Some(3) => 0b1001111,
+        Some(4) => 0b1100110,
+        Some(5) => 0b1101101,
+        Some(6) => 0b1111101,
+        Some(7) => 0b0000111,
+        Some(8) => 0b1111111,
+        Some(9) => 0b1100111,
+        _ => 0,
+    }
+}
+
+entity simple_counter<#uint Bits>(
+    clk: clock,
+    rst: bool,
+) -> uint<Bits> {
+    reg(clk) value reset(rst: 0) = value +. 1;
+    value
 }

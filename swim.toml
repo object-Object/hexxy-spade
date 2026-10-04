@@ -16,3 +16,6 @@ tool = "icepack"
 [upload]
 tool = "openFPGALoader"
 board = "ice40_generic"
+
+[libraries]
+protocols.git = "https://codeberg.org/spade-lang/protocols.git"
