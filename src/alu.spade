@@ -1,0 +1,29 @@
+use lib::decoder::Op;
+
+pub type Stack<#uint N> = [int<32>; N];
+
+pub fn operate<#uint N>(stack: Stack<N>, op: Op) -> Stack<N> {
+    match op {
+        Op::Add => {
+            let (rest, [a, b]) = pop(stack);
+            rest.push_front(0).push_back(a +. b)
+        },
+        Op::Multiply => {
+            let (rest, [a, b]) = pop(stack);
+            rest.push_front(0).push_back(a *. b)
+        },
+        Op::Number(value) => {
+            let ([_], rest) = stack.split_at();
+            rest.push_back(value)
+        },
+        Op::Invalid => stack,
+    }
+}
+
+fn pop<#uint Pop, #uint N>(stack: Stack<N>) -> (Stack<{N - Pop}>, Stack<Pop>) {
+    stack.split_at::<{N - Pop}>()
+}
+
+fn operate_4(stack: Stack<4>, op: Op) -> Stack<4> {
+    operate(stack, op)
+}
