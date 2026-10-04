@@ -1,0 +1,49 @@
+enum Action {
+    Invalid,
+    Add,
+    Number { value: int<32> },
+}
+
+pub fn decode(value: uint<16>) -> Action {
+    match decode_angles(value) {
+        (Angle::W, Angle::A, Angle::A, Angle::W, Angle::Pad, false) => Action::Add,
+        // TODO: 29-bit instead of 13-bit immediate
+        (Angle::Number, _, _, _, _, _) => Action::Number(sext::<13, _>(trunc(value.as_int()))),
+        _ => Action::Invalid,
+    }
+}
+
+fn decode_angles(value: uint<16>) -> (Angle, Angle, Angle, Angle, Angle, bool) {
+    let a = decode_angle(trunc(value >> 13));
+    let b = decode_angle(trunc(value >> 10));
+    let c = decode_angle(trunc(value >> 7));
+    let d = decode_angle(trunc(value >> 4));
+    let e = decode_angle(trunc(value >> 1));
+    let continue = value.lsb();
+    (a, b, c, d, e, continue)
+}
+
+enum Angle {
+    A,
+    Q,
+    W,
+    E,
+    D,
+    Number,
+    Reserved,
+    // Padding at the end of patterns
+    Pad,
+}
+
+fn decode_angle(value: uint<3>) -> Angle {
+    match value {
+        0b000 => Angle::A,
+        0b001 => Angle::Q,
+        0b010 => Angle::W,
+        0b011 => Angle::E,
+        0b100 => Angle::D,
+        0b101 => Angle::Number,
+        0b110 => Angle::Reserved,
+        0b111 => Angle::Pad,
+    }
+}

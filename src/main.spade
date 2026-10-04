@@ -1,2 +1,8 @@
+mod decoder;
+
 #[no_mangle(all)]
 entity main() {}
+
+struct State {
+    stack: [int<32>; 32],
+}
