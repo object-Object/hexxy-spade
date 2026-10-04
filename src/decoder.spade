@@ -54,6 +54,8 @@ fn decode_angles(value: uint<16>) -> (Angle, Angle, Angle, Angle, Angle, bool) {
 }
 
 enum Angle {
+    // Padding at the end of patterns
+    Pad,
     A,
     Q,
     W,
@@ -61,19 +63,17 @@ enum Angle {
     D,
     Number,
     Reserved,
-    // Padding at the end of patterns
-    Pad,
 }
 
 fn decode_angle(value: uint<3>) -> Angle {
     match value {
-        0b000 => Angle::A,
-        0b001 => Angle::Q,
-        0b010 => Angle::W,
-        0b011 => Angle::E,
-        0b100 => Angle::D,
-        0b101 => Angle::Number,
-        0b110 => Angle::Reserved,
-        0b111 => Angle::Pad,
+        0b000 => Angle::Pad,
+        0b001 => Angle::A,
+        0b010 => Angle::Q,
+        0b011 => Angle::W,
+        0b100 => Angle::E,
+        0b101 => Angle::D,
+        0b110 => Angle::Number,
+        0b111 => Angle::Reserved,
     }
 }
