@@ -1,5 +1,24 @@
 mod alu;
 mod decoder;
 
+use alu::operate;
+use decoder::Op;
+
 #[no_mangle(all)]
-entity main() {}
+entity main(
+    clk: clock,
+    rst_n: bool,
+    io_led: inv &[bool; 24],
+) {
+    let rst = !rst_n;
+    reg(clk) counter: uint<28> reset(rst: 0) = if counter < 50_000_000 { counter +. 1 } else { 0 };
+    let step = counter == 0;
+    reg(clk) idx: uint<1> reset(rst: 0) = if step { idx +. 1 } else { idx };
+    let code = [
+        Op::Number(1),
+        Op::Add,
+    ];
+    reg(clk) stack reset(rst: [0; 3]) = if step { operate(stack, code[idx]) } else { stack };
+    let value = stack.fold(0u24, fn |a, b| trunc(a.concat(trunc::<_, uint<8>>(b.as_uint()))));
+    set io_led = &value.as_bits();
+}
