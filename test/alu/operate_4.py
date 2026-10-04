@@ -14,10 +14,10 @@ async def test(dut, values):
 
 tf = TestFactory(test)
 tf.add_option('values', [
-    (
-        [1, 2, 3, 4],
-        "Op::Add",
-        [0, 1, 2, 7],
-    ),
+    ([1, 2, 3, 4], "Op::Add", [0, 1, 2, 7]),
+    ([0, 0, 2, 3], "Op::If", [0, 0, 0, 3]),
+    ([0, 1, 2, 3], "Op::If", [0, 0, 0, 2]),
+    ([4, 1, 2, 3], "Op::If", [0, 0, 4, 2]),
+    ([1, 2, 3, 4], "Op::Swap", [1, 2, 4, 3]),
 ])
 tf.generate_tests()

@@ -1,0 +1,15 @@
+pub enum Op {
+    Add,
+    Multiply,
+
+    ShiftLeft,
+    LogicShiftRight,
+    ArithShiftRight,
+
+    If,
+    Swap,
+
+    Number { value: int<32> },
+
+    Invalid,
+}

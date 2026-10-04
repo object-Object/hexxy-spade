@@ -1,8 +1,9 @@
 mod alu;
+mod instructions;
 mod decoder;
 
 use alu::operate;
-use decoder::Op;
+use instructions::Op;
 
 #[no_mangle(all)]
 entity main(

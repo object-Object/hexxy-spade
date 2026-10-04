@@ -1,9 +1,4 @@
-pub enum Op {
-    Invalid,
-    Add,
-    Multiply,
-    Number { value: int<32> },
-}
+use lib::instructions::Op;
 
 pub struct DecodeResult {
     op: Op,
@@ -15,10 +10,21 @@ pub fn decode(value: uint<32>) -> DecodeResult {
     let b = decode_angles(trunc(value));
     match a {
         (Angle::W, Angle::A, Angle::A, Angle::W, Angle::Pad, false) => DecodeResult(Op::Add, 2),
+        (Angle::E, Angle::A, Angle::Q, Angle::Q, Angle::Pad, false) => DecodeResult(Op::ArithShiftRight, 2),
+        (Angle::A, Angle::W, Angle::D, Angle::D, Angle::Pad, false) => DecodeResult(Op::If, 2),
         (Angle::W, Angle::A, Angle::Q, Angle::A, Angle::W, false) => DecodeResult(Op::Multiply, 2),
+        (Angle::Q, Angle::Q, Angle::A, Angle::E, Angle::Pad, false) => DecodeResult(Op::ShiftLeft, 2),
+        (Angle::A, Angle::A, Angle::W, Angle::D, Angle::D, false) => DecodeResult(Op::Swap, 2),
+
+        (Angle::E, Angle::A, Angle::Q, Angle::Q, Angle::D, true) => match b {
+            (Angle::E, Angle::E, Angle::Pad, Angle::Pad, Angle::Pad, false) => DecodeResult(Op::LogicShiftRight, 4),
+            _ => DecodeResult(Op::Invalid, 4),
+        },
+
         (Angle::Number, _, _, _, _, _) => DecodeResult(
             Op::Number(sext::<29, _>(trunc(value.as_int()))), 4
         ),
+
         _ => DecodeResult(Op::Invalid, 2),
     }
 }

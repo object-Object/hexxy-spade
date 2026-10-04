@@ -1,4 +1,4 @@
-use lib::decoder::Op;
+use lib::instructions::Op;
 
 pub type Stack<#uint N> = [int<32>; N];
 
@@ -6,24 +6,53 @@ pub fn operate<#uint N>(stack: Stack<N>, op: Op) -> Stack<N> {
     match op {
         Op::Add => {
             let (rest, [a, b]) = pop(stack);
-            rest.push_front(0).push_back(a +. b)
+            push(rest, [a +. b])
         },
         Op::Multiply => {
             let (rest, [a, b]) = pop(stack);
-            rest.push_front(0).push_back(a *. b)
+            push(rest, [a *. b])
         },
+
+        Op::ShiftLeft => {
+            let (rest, [x, shift]) = pop(stack);
+            push(rest, [x << shift])
+        },
+        Op::LogicShiftRight => {
+            let (rest, [x, shift]) = pop(stack);
+            push(rest, [(x.as_uint() >> shift.as_uint()).as_int()])
+        },
+        Op::ArithShiftRight => {
+            let (rest, [x, shift]) = pop(stack);
+            push(rest, [x >> shift])
+        },
+
+        Op::If => {
+            let (rest, [a, b, c]) = pop(stack);
+            push(rest, [if a == 0 { c } else { b }])
+        },
+        Op::Swap => {
+            let (rest, [a, b]) = pop(stack);
+            push(rest, [b, a])
+        },
+
         Op::Number(value) => {
             let ([_], rest) = stack.split_at();
-            rest.push_back(value)
+            push(rest, [value])
         },
+
         Op::Invalid => stack,
     }
 }
 
-fn pop<#uint Pop, #uint N>(stack: Stack<N>) -> (Stack<{N - Pop}>, Stack<Pop>) {
+fn pop<#uint N, #uint Pop>(stack: Stack<N>) -> (Stack<{N - Pop}>, Stack<Pop>) {
     stack.split_at::<{N - Pop}>()
 }
 
+fn push<#uint N, #uint M, #uint Push>(stack: Stack<N>, push: Stack<Push>) -> Stack<M> {
+    [0; M - N - Push].concat(stack).concat(push)
+}
+
+// testbench
 fn operate_4(stack: Stack<4>, op: Op) -> Stack<4> {
     operate(stack, op)
 }
