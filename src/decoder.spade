@@ -1,15 +1,25 @@
-enum Action {
+pub enum Op {
     Invalid,
     Add,
+    Multiply,
     Number { value: int<32> },
 }
 
-pub fn decode(value: uint<16>) -> Action {
-    match decode_angles(value) {
-        (Angle::W, Angle::A, Angle::A, Angle::W, Angle::Pad, false) => Action::Add,
-        // TODO: 29-bit instead of 13-bit immediate
-        (Angle::Number, _, _, _, _, _) => Action::Number(sext::<13, _>(trunc(value.as_int()))),
-        _ => Action::Invalid,
+pub struct DecodeResult {
+    op: Op,
+    bytes: uint<3>,
+}
+
+pub fn decode(value: uint<32>) -> DecodeResult {
+    let a = decode_angles(trunc(value >> 16));
+    let b = decode_angles(trunc(value));
+    match a {
+        (Angle::W, Angle::A, Angle::A, Angle::W, Angle::Pad, false) => DecodeResult(Op::Add, 2),
+        (Angle::W, Angle::A, Angle::Q, Angle::A, Angle::W, false) => DecodeResult(Op::Multiply, 2),
+        (Angle::Number, _, _, _, _, _) => DecodeResult(
+            Op::Number(sext::<29, _>(trunc(value.as_int()))), 4
+        ),
+        _ => DecodeResult(Op::Invalid, 2),
     }
 }
 
