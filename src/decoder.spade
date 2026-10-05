@@ -5,6 +5,15 @@ pub struct DecodedOp {
     bytes: uint<3>,
 }
 
+impl Option<DecodedOp> {
+    pub fn into_op(self) -> Option<Op> {
+        match self {
+            Some(value) => Some(value.op),
+            None => None,
+        }
+    }
+}
+
 pub fn decode(value: uint<32>) -> DecodedOp {
     let a = decode_angles(trunc(value >> 16));
     let b = decode_angles(trunc(value));

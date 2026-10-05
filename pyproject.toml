@@ -1,0 +1,10 @@
+[tool.pyright]
+venvPath = "build"
+typeCheckingMode = "basic"
+exclude = [
+    "**/venv",
+    "**/.venv",
+    "**/.*",
+    "**/build",
+    "**/test",
+]

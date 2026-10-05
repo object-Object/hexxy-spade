@@ -1,33 +1,45 @@
 mod alu;
-mod instructions;
 mod decoder;
+mod instructions;
+mod uart;
 
 use alu::operate;
+use decoder::decode;
 use instructions::Op;
+use protocols::uart::{UartConfig, uart_rx, uart_tx};
+use ready_valid::Rv;
 
 #[no_mangle(all)]
 entity main(
     clk: clock,
     rst_n: bool,
+    usb_rx: bool,
     io_led: inv &[bool; 24],
     io_select: inv &[bool; 4],
     io_segment: inv &[bool; 8],
 ) {
     let rst = !rst_n;
 
-    reg(clk) counter: uint<28> reset(rst: 0) = if counter < 50_000_000 { counter +. 1 } else { 0 };
-    let step = counter == 0;
-    reg(clk) idx: uint<1> reset(rst: 0) = if step { idx +. 1 } else { idx };
-    let code = [
-        Op::Number(1),
-        Op::Add,
-    ];
-    reg(clk) stack reset(rst: [0; 64]) = if step { operate(stack, code[idx]) } else { stack };
+    // 5208 should? be 19200 baud at 100 MHz
+    let uart_config = UartConfig(bit_time: 5208, parity: false, stop_bits: 1);
 
-    let led_value = stack[60..63].fold(0u24, fn |a, b| trunc(a.concat(trunc::<_, uint<8>>(b.as_uint()))));
+    let received = inst uart_rx(clk, rst, usb_rx, uart_config)
+        .inst into_word(clk, rst);
+
+    let op = match received {
+        Some(value) => Some(decode(value)),
+        None => None,
+    };
+
+    reg(clk) stack reset(rst: [0i32; 32]) = match op.into_op() {
+        Some(op) => operate(stack, op),
+        None => stack,
+    };
+
+    let led_value = stack[28..31].fold(0u24, fn |a, b| trunc(a.concat(trunc::<_, uint<8>>(b.as_uint()))));
     set io_led = &led_value.as_bits();
 
-    let chars = match inst double_dabble_3(clk, rst, trunc(stack[63])) {
+    let chars = match inst double_dabble_3(clk, rst, trunc(stack[31])) {
         Some((positive, a, b, c)) => [
             if positive { Digit::Off } else { Digit::Custom(1 << 6) },
             Digit::Number(Some(a), false),
@@ -83,7 +95,7 @@ entity multi_seven_seg(
     rst: bool,
     chars: [Digit; 4],
 ) -> ([bool; 4], [bool; 8]) {
-    let counter = inst simple_counter::$<Bits: 11>(clk, rst);
+    let counter = inst simple_counter::$<Bits: 14>(clk, rst);
     reg(clk) select_idx reset(rst: 0u2) = if counter == 0 { select_idx +. 1 } else { select_idx };
 
     let select = ~(1 << zext(select_idx)).as_bits();

@@ -1,0 +1,23 @@
+use protocols::uart::UartOut;
+
+// https://gitlab.com/TheZoq2/spade-v/-/blob/f0aaf68d0c9558478ba4604b255eb9b9127308e4/src/uart_loader.spade
+impl UartOut {
+    entity into_word(self, clk: clock, rst: bool) -> Option<uint<32>> {
+        let rx = self.strip_parity();
+
+        reg(clk) (bytes, valid_bytes): (uint<32>, uint<4>) reset(rst: (0, 0)) = match (rx, bytes, valid_bytes) {
+            (Some(byte), _, 0xf) => (zext(byte), 1),
+            (None, _, 0xf) => (0, 0),
+            (Some(byte), prev, prev_valid) => (
+                prev << 8 | zext(byte),
+                trunc(prev_valid << 1 | 1),
+            ),
+            _ => (bytes, valid_bytes)
+        };
+
+        match valid_bytes {
+            0xf => Some(bytes),
+            _ => None,
+        }
+    }
+}

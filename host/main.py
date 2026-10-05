@@ -9,7 +9,7 @@ type ResolvedPatternType = Literal[
 ]
 
 
-PORT = "/dev/ttyUSB0"
+PORT = "/dev/ttyUSB1"
 BAUD = 19200
 
 app = FastAPI()
@@ -31,14 +31,14 @@ def post_resolve(signature: str) -> ResolvedPatternType:
     try:
         with Serial(PORT, BAUD, timeout=1) as ser:
             ser.write(encoded)
-            response = ser.read(1)
-        match response:
-            case bytes(1):
-                return "evaluated"
-            case bytes(2):
-                return "invalid"
-            case _:
-                return "errored"
+            return "evaluated"
+            # TODO: make this work
+            # response = ser.read(1)
+            # if response == bytes(1):
+            #     return "evaluated"
+            # if response == bytes(2):
+            #     return "invalid"
+            # return "errored"
     except Exception as e:  # noqa
         print(e)
         return "errored"
@@ -69,7 +69,7 @@ def encode_pattern(signature: str) -> bytes | None:
         encoded = encode_chunk(signature, False)
         if encoded is None:
             return None
-        return encoded.to_bytes(2)
+        return (encoded << 16).to_bytes(4)
     elif len(signature) <= 10:
         a = encode_chunk(signature[:5], True)
         b = encode_chunk(signature[5:], False)

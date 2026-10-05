@@ -8,6 +8,5 @@
         "editor.rulers": [88]
     },
     "python-envs.defaultEnvManager": "ms-python.python:system",
-    "python.analysis.typeCheckingMode": "basic",
-    "python.analysis.ignore": ["src", "build", "test"]
+    "python.analysis.diagnosticMode": "openFilesOnly",
 }

@@ -1,1 +1,1 @@
-Run: `uv run fastapi dev`
+Run: `sudo uv run fastapi dev`
